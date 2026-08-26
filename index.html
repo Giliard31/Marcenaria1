@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marcenaria Express - Gestão</title>
+    
+    <!-- Configurações PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2d1e14">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Marcenaria">
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body { 
+            background-color: #f7f4ef; 
+            color: #2c221e; 
+            padding-top: 100px; 
+            padding-bottom: 40px; 
+            font-size: 1.1rem; 
+        }
+
+        /* CABEÇALHO */
+        header {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: linear-gradient(135deg, #4a3525, #2d1e14); 
+            color: #fff; z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .header-navbar {
+            height: 80px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+        }
+        .header-brand h1 { font-size: 1.4rem; font-weight: 700; color: #f4e8c1; }
+        .header-info { font-size: 0.95rem; color: #d7c4b7; margin-top: 3px; }
+        
+        .btn-menu { background: none; border: none; cursor: pointer; display: flex; flex-direction: column; gap: 6px; padding: 5px; }
+        .btn-menu div { width: 32px; height: 4px; background-color: #f4e8c1; border-radius: 2px; }
+
+        /* GAVETA LATERAL */
+        .drawer-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1001; opacity: 0; visibility: hidden; transition: 0.3s;
+        }
+        .drawer-overlay.active { opacity: 1; visibility: visible; }
+        .drawer {
+            position: fixed; top: 0; left: -360px; width: 340px; height: 100%;
+            background-color: #fff8f0; z-index: 1002; transition: left 0.3s; display: flex; flex-direction: column;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.2);
+        }
+        .drawer.active { left: 0; }
+        .drawer-header { background: #2d1e14; color: #f4e8c1; padding: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 1.2rem; }
+        .drawer-content { padding: 20px; overflow-y: auto; flex: 1; }
+        .drawer-menu-item {
+            display: block; width: 100%; padding: 14px; margin-bottom: 10px;
+            background: #fff; border: 1px solid #e6d7c3; border-radius: 8px; font-weight: 600; text-align: left; cursor: pointer; color: #4a3525;
+            font-size: 1rem; transition: 0.2s;
+        }
+        .drawer-menu-item:hover { background: #f4e8c1; }
+
+        /* CARDS */
+        .container { max-width: 700px; margin: 0 auto; padding: 0 15px; }
+        .card { 
+            background: #ffffff; border-radius: 12px; padding: 22px; margin-bottom: 22px; 
+            box-shadow: 0 4px 10px rgba(74, 53, 37, 0.06); border-left: 6px solid #8c6239;
+        }
+        .card h2 { 
+            font-size: 1.25rem; margin-bottom: 16px; color: #4a3525; border-bottom: 2px solid #f0e6d2; 
+            padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; 
+        }
+        
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 1rem; font-weight: 700; margin-bottom: 6px; color: #5c4535; }
+        .form-group input, .form-group select { 
+            width: 100%; padding: 13px; border: 1px solid #dcd0c0; border-radius: 8px; background-color: #faf8f5; color: #2c221e; font-size: 1.05rem;
+        }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        
+        /* BOTÕES */
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 1.05rem; font-weight: 700; cursor: pointer; background: #8c6239; color: white; transition: 0.2s; }
+        .btn:hover { background: #73502e; }
+        .btn-novo { background-color: #d97706; color: white; padding: 10px 18px; font-size: 1rem; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-success { background-color: #2e7d32; }
+        .btn-wsp { background-color: #25d366; color: white; margin-top: 10px; font-weight: bold; font-size: 1.1rem; }
+        .btn-edit { background-color: #d97706; padding: 8px 12px; font-size: 0.9rem; border-radius: 6px; border: none; color: white; cursor: pointer; font-weight: bold; }
+        .btn-del { background-color: #dc2626; padding: 8px 12px; font-size: 0.9rem; border-radius: 6px; border: none; color: white; cursor: pointer; font-weight: bold; }
+
+        .cliente-confirmado-box {
+            background: #fef3c7; border: 1px solid #fde68a; color: #78350f;
+            padding: 14px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 1.05rem;
+        }
+
+        .item-lista { padding: 12px; border: 1px solid #e6d7c3; border-radius: 8px; margin-bottom: 10px; background: #fff; display: flex; justify-content: space-between; align-items: center; font-size: 1rem; }
+        .cupom-header { text-align: center; border-bottom: 2px dashed #dcd0c0; padding-bottom: 12px; margin-bottom: 15px; font-size: 0.95rem; }
+        .cupom-item { display: flex; justify-content: space-between; font-size: 1rem; padding: 8px 0; border-bottom: 1px solid #f0e6d2; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 1rem; }
+        th { background-color: #f4e8c1; color: #4a3525; padding: 12px; text-align: left; font-size: 1.05rem; }
+        td { padding: 12px; border-bottom: 1px solid #f0e6d2; }
+        
+        .resumo-box { background: #fff8f0; border: 1px solid #e6d7c3; border-radius: 8px; padding: 18px; margin-top: 15px; }
+        .resumo-linha { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1.05rem; }
+        .resumo-linha.total { font-size: 1.3rem; font-weight: bold; color: #2e7d32; border-top: 2px solid #e6d7c3; padding-top: 10px; margin-top: 8px; }
+        
+        .modal-sec { display: none; }
+        .modal-sec.active { display: block; }
+
+        /* NOTIFICAÇÃO PERSONALIZADA (TOAST) */
+        #toast-notification {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: #2d1e14; color: #f4e8c1; padding: 14px 24px; border-radius: 30px;
+            font-size: 1.05rem; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 2000; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s;
+            border: 2px solid #8c6239; text-align: center;
+        }
+        #toast-notification.show { opacity: 1; visibility: visible; }
+
+        /* BANNER DE INSTALAÇÃO PWA */
+        #install-banner {
+            display: none; position: fixed; top: 90px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 500px; background: #d97706; color: white; padding: 12px 18px;
+            border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1001;
+            align-items: center; justify-content: space-between; font-weight: bold;
+        }
+        #install-banner button {
+            background: #2d1e14; color: #f4e8c1; border: none; padding: 8px 14px;
+            border-radius: 6px; font-weight: bold; cursor: pointer; margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- BANNER DE INSTALAÇÃO DO APLICATIVO -->
+    <div id="install-banner">
+        <span>📲 Instalar App na Tela Inicial?</span>
+        <div>
+            <button onclick="dispararInstalacaoApp()">Instalar</button>
+            <button onclick="fecharBannerInstalacao()" style="background:transparent; color:white;">✕</button>
+        </div>
+    </div>
+
+    <!-- NOTIFICAÇÃO SYSTEM -->
+    <div id="toast-notification">Operação realizada com sucesso!</div>
+
+    <header>
+        <div class="header-navbar">
+            <div class="header-brand">
+                <h1 id="header-empresa-nome">Marcenaria Express</h1>
+                <div class="header-info" id="header-empresa-sub">Tel: -- | Instagram: --</div>
+            </div>
+            <button class="btn-menu" onclick="toggleDrawer()">
+                <div></div><div></div><div></div>
+            </button>
+        </div>
+    </header>
+
+    <div class="drawer-overlay" id="drawer-overlay" onclick="toggleDrawer()"></div>
+    <div class="drawer" id="drawer">
+        <div class="drawer-header">
+            <h3>Menu & Gerenciamento</h3>
+            <span style="cursor:pointer;" onclick="toggleDrawer()">✕</span>
+        </div>
+        <div class="drawer-content">
+            <button class="drawer-menu-item btn-menu-sec" onclick="abrirSecao('sec-historico', this)">🔍 Histórico de Orçamentos</button>
+            <button class="drawer-menu-item btn-menu-sec" onclick="abrirSecao('sec-empresa', this)">🏢 Dados da Empresa</button>
+            <button class="drawer-menu-item btn-menu-sec" onclick="abrirSecao('sec-materiais', this)">📦 MDFs e Chapas</button>
+            <button class="drawer-menu-item btn-menu-sec" onclick="abrirSecao('sec-ferramentas', this)">🛠️ Ferragens / Acessórios</button>
+            <button class="drawer-menu-item btn-menu-sec" onclick="abrirSecao('sec-pecas-padrao', this)">📐 Nomes das Peças</button>
+
+            <div id="sec-historico" class="modal-sec">
+                <h4 style="margin: 10px 0;">Histórico de Orçamentos</h4>
+                <div class="form-group"><input type="text" id="input-busca-historico" placeholder="Pesquisar..." oninput="renderizarHistoricoDrawer()"></div>
+                <div id="lista-historico-drawer" style="margin-top: 15px; max-height: 350px; overflow-y: auto;"></div>
+            </div>
+
+            <div id="sec-empresa" class="modal-sec">
+                <h4 style="margin: 10px 0;">Minha Marcenaria</h4>
+                <div class="form-group"><label>Nome da Empresa</label><input type="text" id="emp-nome"></div>
+                <div class="form-group"><label>Telefone / WhatsApp</label><input type="text" id="emp-tel"></div>
+                <div class="form-group"><label>E-mail</label><input type="text" id="emp-email"></div>
+                <div class="form-group"><label>Instagram</label><input type="text" id="emp-insta"></div>
+                <div class="form-group"><label>Endereço Completo</label><input type="text" id="emp-end"></div>
+                <button class="btn btn-success" onclick="salvarEmpresa()">Salvar Configurações</button>
+            </div>
+
+            <div id="sec-materiais" class="modal-sec">
+                <h4 style="margin: 10px 0;">Cadastrar MDF</h4>
+                <input type="hidden" id="edit-mat-id">
+                <div class="form-group"><label>Cor / Nome</label><input type="text" id="mat-nome"></div>
+                <div class="form-group"><label>Milímetros (mm)</label><input type="number" id="mat-mm"></div>
+                <div class="form-group"><label>Valor Chapa (R$)</label><input type="number" id="mat-valor"></div>
+                <button class="btn btn-success" onclick="salvarMaterial()">Salvar Material</button>
+                <div id="lista-mdfs-cadastrados" style="margin-top: 15px;"></div>
+            </div>
+
+            <div id="sec-ferramentas" class="modal-sec">
+                <h4 style="margin: 10px 0;">Cadastrar Ferragens</h4>
+                <input type="hidden" id="edit-ferr-id">
+                <div class="form-group"><label>Nome da Ferragem</label><input type="text" id="ferr-nome"></div>
+                <div class="form-group"><label>Custo Unitário (R$)</label><input type="number" id="ferr-valor"></div>
+                <button class="btn btn-success" onclick="salvarFerramenta()">Salvar Item</button>
+                <div id="lista-ferramentas-cadastradas" style="margin-top: 15px;"></div>
+            </div>
+
+            <div id="sec-pecas-padrao" class="modal-sec">
+                <h4 style="margin: 10px 0;">Nomes das Peças</h4>
+                <div class="form-group"><label>Nome da Posição</label><input type="text" id="pos-nome" placeholder="Ex: Prateleira"></div>
+                <button class="btn btn-success" onclick="salvarPosicao()">Adicionar Posição</button>
+                <div id="lista-posicoes" style="margin-top: 15px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+            <h2 style="font-size: 1.35rem; color: #4a3525;">Painel de Medição</h2>
+            <button class="btn-novo" onclick="iniciarNovoOrcamento()">➕ Novo Orçamento</button>
+        </div>
+
+        <div class="card" id="card-cliente">
+            <h2>1. Dados do Cliente</h2>
+            <div id="form-cliente-inputs">
+                <div class="form-group">
+                    <label>Selecione um cliente (opcional)</label>
+                    <select id="select-cliente-direto" onchange="selecionarClienteDropdown()"></select>
+                </div>
+                <div class="form-group">
+                    <label>Nome do Cliente *</label>
+                    <input type="text" id="cli-nome" placeholder="Nome completo">
+                </div>
+                <div class="grid-2">
+                    <div class="form-group"><label>WhatsApp / Tel *</label><input type="text" id="cli-tel" placeholder="Ex: 85999998888"></div>
+                    <div class="form-group"><label>Bairro</label><input type="text" id="cli-bairro" placeholder="Bairro"></div>
+                </div>
+                <button class="btn btn-success" onclick="ocultarESalvarCliente()">🔒 Salvar / Ocultar Dados</button>
+            </div>
+            <div id="box-cliente-confirmado" class="cliente-confirmado-box" style="display: none;">
+                <div>
+                    <span>👤 <span id="txt-cli-confirmado-nome">--</span></span><br>
+                    <small style="font-weight: normal;" id="txt-cli-confirmado-tel">--</small>
+                </div>
+                <button class="btn-edit" onclick="editarDadosClienteOculto()">Editar Dados</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>2. Inserir Peças e Medidas (cm)</h2>
+            <div class="grid-2">
+                <div class="form-group"><label>Tipo / Posição</label><select id="select-posicao-peca"></select></div>
+                <div class="form-group"><label>Selecione o MDF</label><select id="select-material"></select></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>Altura (cm)</label><input type="number" id="peca-alt" placeholder="Ex: 110"></div>
+                <div class="form-group"><label>Largura (cm)</label><input type="number" id="peca-larg" placeholder="Ex: 60"></div>
+            </div>
+            <div class="form-group"><label>Quantidade de Peças Iguais</label><input type="number" id="peca-qtd" value="1"></div>
+            <button class="btn" onclick="adicionarPeca()">+ Adicionar à Lista</button>
+            <table>
+                <thead><tr><th>Posição</th><th>MDF</th><th>Medida</th><th>Qtd</th><th>Ação</th></tr></thead>
+                <tbody id="tb-pecas"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>3. Ferragens e Acessórios do Projeto</h2>
+            <div class="grid-2">
+                <div class="form-group"><label>Item</label><select id="select-ferramenta"></select></div>
+                <div class="form-group"><label>Quantidade</label><input type="number" id="ferr-qtd" value="1"></div>
+            </div>
+            <button class="btn" onclick="adicionarFerramentaProjeto()">+ Incluir Ferragem</button>
+            <table>
+                <thead><tr><th>Item</th><th>Qtd</th><th>Subtotal</th><th>Ação</th></tr></thead>
+                <tbody id="tb-ferramentas"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>4. Lista Final & Orçamento</h2>
+            <div class="cupom-header">
+                <h3 id="cupom-empresa-nome" style="font-size: 1.2rem;">Marcenaria</h3>
+                <p id="cupom-empresa-detalhes">Endereço e Contatos</p>
+                <p style="margin-top: 5px;"><strong>CLIENTE:</strong> <span id="cupom-cliente-nome">--</span></p>
+                <p><strong>DATA:</strong> <span id="cupom-data">--</span></p>
+            </div>
+            <div id="cupom-itens-lista"></div>
+            <div class="grid-2" style="margin-top: 15px;">
+                <div class="form-group"><label>Perda de MDF (%)</label><input type="number" id="val-perda-porcentagem" value="10" oninput="calcularTotalGeral()"></div>
+                <div class="form-group"><label>Margem Lucro (%)</label><input type="number" id="val-margem-porcentagem" value="30" oninput="calcularTotalGeral()"></div>
+            </div>
+            <div class="form-group"><label>Mão de Obra (R$)</label><input type="number" id="val-mao-obra" value="400" oninput="calcularTotalGeral()"></div>
+            <div class="resumo-box">
+                <div class="resumo-linha"><span>Custo MDF Liquido:</span><span>R$ <span id="res-mat">0.00</span></span></div>
+                <div class="resumo-linha"><span>Perda de MDF (<span id="txt-perda-aplicada">10</span>%):</span><span>R$ <span id="res-perda">0.00</span></span></div>
+                <div class="resumo-linha"><span>Ferragens/Acessórios:</span><span>R$ <span id="res-ferr">0.00</span></span></div>
+                <div class="resumo-linha"><span>Margem (<span id="txt-porcentagem-aplicada">30</span>%):</span><span>R$ <span id="res-margem">0.00</span></span></div>
+                <div class="resumo-linha"><span>Mão de Obra:</span><span>R$ <span id="res-mao-obra">400.00</span></span></div>
+                <div class="resumo-linha total"><span>VALOR TOTAL:</span><span>R$ <span id="res-total">0.00</span></span></div>
+            </div>
+            <button class="btn btn-success" style="margin-top: 15px;" onclick="salvarOrcamentoCompleto()">💾 Salvar Orçamento Completo</button>
+            <button class="btn btn-wsp" onclick="enviarWhatsApp()">📲 Enviar Orçamento via WhatsApp</button>
+        </div>
+    </div>
+
+    <script>
+        // LÓGICA DE INSTALAÇÃO AUTOMÁTICA DO APLICATIVO
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('install-banner').style.display = 'flex';
+        });
+
+        function dispararInstalacaoApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        mostrarNotificacao("Aplicativo Instalado!");
+                    }
+                    deferredPrompt = null;
+                    fecharBannerInstalacao();
+                });
+            }
+        }
+
+        function fecharBannerInstalacao() {
+            document.getElementById('install-banner').style.display = 'none';
+        }
+
+        // REGISTRO DE SERVICE WORKER
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+
+        let db = {
+            empresa: JSON.parse(localStorage.getItem('m_empresa')) || { nome: "Marcenaria Express", tel: "(00) 00000-0000", email: "", insta: "@marcenaria", end: "Rua Principal, 123" },
+            posicoes: JSON.parse(localStorage.getItem('m_posicoes')) || ["Tampa", "Fundo", "Lateral Esquerda", "Lateral Direita", "Prateleira", "Porta", "Ripa"],
+            materiais: JSON.parse(localStorage.getItem('m_materiais')) || [{ id: 1, nome: "MDF Branco Supremo", mm: 15, valor: 280.00 }],
+            ferramentas: JSON.parse(localStorage.getItem('m_ferramentas')) || [{ id: 1, nome: "Dobradiça 35mm", valor: 12.00 }],
+            clientes: JSON.parse(localStorage.getItem('m_clientes')) || [],
+            orcamentos: JSON.parse(localStorage.getItem('m_orcamentos')) || []
+        };
+
+        let pecasProjeto = [];
+        let ferramentasProjeto = [];
+        let clienteAtualNome = "";
+        let clienteAtualTel = "";
+        const CHAPA_M2 = 5.06;
+
+        window.onload = function() {
+            carregarEmpresaView();
+            carregarSelects();
+            renderizarListasGerenciamento();
+        };
+
+        function mostrarNotificacao(mensagem) {
+            let toast = document.getElementById('toast-notification');
+            toast.innerText = mensagem;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3000);
+        }
+
+        function toggleDrawer() {
+            document.getElementById('drawer').classList.toggle('active');
+            document.getElementById('drawer-overlay').classList.toggle('active');
+            fecharTodasSecoes();
+        }
+
+        function abrirSecao(id, btnElement) {
+            document.querySelectorAll('.modal-sec').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.btn-menu-sec').forEach(b => b.style.display = 'none');
+            document.getElementById(id).classList.add('active');
+            if(id === 'sec-historico') renderizarHistoricoDrawer();
+        }
+
+        function fecharTodasSecoes() {
+            document.querySelectorAll('.modal-sec').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.btn-menu-sec').forEach(b => b.style.display = 'block');
+        }
+
+        function ocultarESalvarCliente() {
+            let nome = document.getElementById('cli-nome').value.trim();
+            let tel = document.getElementById('cli-tel').value.trim();
+            let bairro = document.getElementById('cli-bairro').value.trim();
+
+            if(!nome) return mostrarNotificacao("Por favor, digite o nome do cliente.");
+
+            clienteAtualNome = nome;
+            clienteAtualTel = tel;
+
+            let existe = db.clientes.find(c => c.nome.toLowerCase() === nome.toLowerCase());
+            if(!existe) {
+                db.clientes.unshift({ id: Date.now(), nome, tel, bairro, dataHora: new Date().toLocaleString('pt-BR') });
+                localStorage.setItem('m_clientes', JSON.stringify(db.clientes));
+                carregarSelects();
+            }
+
+            document.getElementById('form-cliente-inputs').style.display = 'none';
+            document.getElementById('box-cliente-confirmado').style.display = 'flex';
+            document.getElementById('txt-cli-confirmado-nome').innerText = nome;
+            document.getElementById('txt-cli-confirmado-tel').innerText = tel ? `Tel: ${tel}` : 'Sem telefone registrado';
+
+            document.getElementById('cupom-cliente-nome').innerText = nome;
+            document.getElementById('cupom-data').innerText = new Date().toLocaleDateString('pt-BR');
+            mostrarNotificacao("Dados do cliente salvos!");
+        }
+
+        function editarDadosClienteOculto() {
+            document.getElementById('form-cliente-inputs').style.display = 'block';
+            document.getElementById('box-cliente-confirmado').style.display = 'none';
+        }
+
+        function selecionarClienteDropdown() {
+            let id = document.getElementById('select-cliente-direto').value;
+            if(id) {
+                let c = db.clientes.find(item => item.id == id);
+                document.getElementById('cli-nome').value = c.nome;
+                document.getElementById('cli-tel').value = c.tel || '';
+                document.getElementById('cli-bairro').value = c.bairro || '';
+            }
+        }
+
+        function iniciarNovoOrcamento() {
+            pecasProjeto = [];
+            ferramentasProjeto = [];
+            clienteAtualNome = "";
+            clienteAtualTel = "";
+
+            document.getElementById('cli-nome').value = '';
+            document.getElementById('cli-tel').value = '';
+            document.getElementById('cli-bairro').value = '';
+            document.getElementById('select-cliente-direto').value = '';
+            
+            editarDadosClienteOculto();
+
+            document.getElementById('peca-alt').value = '';
+            document.getElementById('peca-larg').value = '';
+            document.getElementById('peca-qtd').value = '1';
+
+            renderizarPecas();
+            renderizarFerramentas();
+            mostrarNotificacao("Novo orçamento iniciado!");
+        }
+
+        function renderizarHistoricoDrawer() {
+            let termo = document.getElementById('input-busca-historico').value.toLowerCase();
+            let container = document.getElementById('lista-historico-drawer');
+            container.innerHTML = '';
+
+            let filtrados = db.orcamentos.filter(o => o.cliente.toLowerCase().includes(termo));
+            if(filtrados.length === 0) {
+                container.innerHTML = '<p style="font-size:0.95rem; color:#64748b;">Nenhum orçamento encontrado.</p>';
+                return;
+            }
+
+            filtrados.forEach(o => {
+                container.innerHTML += `
+                    <div class="item-lista" style="cursor:pointer;" onclick="carregarOrcamentoDoHistorico(${o.id})">
+                        <div>
+                            <strong>👤 ${o.cliente}</strong><br>
+                            <small>${o.data} - Total: R$ ${o.totalGeral}</small>
+                        </div>
+                        <button class="btn-edit">Abrir</button>
+                    </div>
+                `;
+            });
+        }
+
+        function carregarOrcamentoDoHistorico(id) {
+            let orc = db.orcamentos.find(o => o.id === id);
+            if(orc) {
+                clienteAtualNome = orc.cliente;
+                clienteAtualTel = orc.tel || '';
+
+                document.getElementById('cli-nome').value = orc.cliente;
+                document.getElementById('cli-tel').value = orc.tel || '';
+                
+                ocultarESalvarCliente();
+
+                pecasProjeto = orc.pecas || [];
+                ferramentasProjeto = orc.ferramentas || [];
+                document.getElementById('val-mao-obra').value = orc.maoObra || 400;
+                if(orc.pctLucro) document.getElementById('val-margem-porcentagem').value = orc.pctLucro;
+                if(orc.pctPerda !== undefined) document.getElementById('val-perda-porcentagem').value = orc.pctPerda;
+                
+                renderizarPecas();
+                renderizarFerramentas();
+                toggleDrawer();
+                mostrarNotificacao("Orçamento carregado!");
+            }
+        }
+
+        function salvarEmpresa() {
+            db.empresa = {
+                nome: document.getElementById('emp-nome').value,
+                tel: document.getElementById('emp-tel').value,
+                email: document.getElementById('emp-email').value,
+                insta: document.getElementById('emp-insta').value,
+                end: document.getElementById('emp-end').value
+            };
+            localStorage.setItem('m_empresa', JSON.stringify(db.empresa));
+            carregarEmpresaView();
+            fecharTodasSecoes();
+            mostrarNotificacao("Dados da empresa salvos com sucesso!");
+        }
+
+        function carregarEmpresaView() {
+            document.getElementById('emp-nome').value = db.empresa.nome || '';
+            document.getElementById('emp-tel').value = db.empresa.tel || '';
+            document.getElementById('emp-email').value = db.empresa.email || '';
+            document.getElementById('emp-insta').value = db.empresa.insta || '';
+            document.getElementById('emp-end').value = db.empresa.end || '';
+
+            document.getElementById('header-empresa-nome').innerText = db.empresa.nome;
+            document.getElementById('header-empresa-sub').innerText = `Tel: ${db.empresa.tel} | Insta: ${db.empresa.insta}`;
+
+            document.getElementById('cupom-empresa-nome').innerText = db.empresa.nome;
+            document.getElementById('cupom-empresa-detalhes').innerText = `${db.empresa.end} | ${db.empresa.tel} | ${db.empresa.email}`;
+        }
+
+        function salvarMaterial() {
+            let id = document.getElementById('edit-mat-id').value;
+            let nome = document.getElementById('mat-nome').value;
+            let mm = document.getElementById('mat-mm').value;
+            let valor = parseFloat(document.getElementById('mat-valor').value);
+
+            if(id) {
+                let idx = db.materiais.findIndex(m => m.id == id);
+                db.materiais[idx] = { id: Number(id), nome, mm, valor };
+            } else {
+                db.materiais.push({ id: Date.now(), nome, mm, valor });
+            }
+            localStorage.setItem('m_materiais', JSON.stringify(db.materiais));
+            limparFormMat();
+            carregarSelects();
+            renderizarListasGerenciamento();
+            fecharTodasSecoes();
+            mostrarNotificacao("Material salvo com sucesso!");
+        }
+        function editarMat(id) {
+            let m = db.materiais.find(item => item.id == id);
+            document.getElementById('edit-mat-id').value = m.id;
+            document.getElementById('mat-nome').value = m.nome;
+            document.getElementById('mat-mm').value = m.mm;
+            document.getElementById('mat-valor').value = m.valor;
+        }
+        function deletarMat(id) {
+            db.materiais = db.materiais.filter(m => m.id != id);
+            localStorage.setItem('m_materiais', JSON.stringify(db.materiais));
+            carregarSelects(); renderizarListasGerenciamento();
+            mostrarNotificacao("Material removido!");
+        }
+        function limparFormMat() {
+            document.getElementById('edit-mat-id').value = '';
+            document.getElementById('mat-nome').value = ''; document.getElementById('mat-mm').value = ''; document.getElementById('mat-valor').value = '';
+        }
+
+        function salvarFerramenta() {
+            let id = document.getElementById('edit-ferr-id').value;
+            let nome = document.getElementById('ferr-nome').value;
+            let valor = parseFloat(document.getElementById('ferr-valor').value);
+
+            if(id) {
+                let idx = db.ferramentas.findIndex(f => f.id == id);
+                db.ferramentas[idx] = { id: Number(id), nome, valor };
+            } else {
+                db.ferramentas.push({ id: Date.now(), nome, valor });
+            }
+            localStorage.setItem('m_ferramentas', JSON.stringify(db.ferramentas));
+            document.getElementById('edit-ferr-id').value = '';
+            document.getElementById('ferr-nome').value = ''; document.getElementById('ferr-valor').value = '';
+            carregarSelects(); renderizarListasGerenciamento();
+            fecharTodasSecoes();
+            mostrarNotificacao("Item salvo com sucesso!");
+        }
+        function editarFerr(id) {
+            let f = db.ferramentas.find(item => item.id == id);
+            document.getElementById('edit-ferr-id').value = f.id;
+            document.getElementById('ferr-nome').value = f.nome;
+            document.getElementById('ferr-valor').value = f.valor;
+        }
+        function deletarFerr(id) {
+            db.ferramentas = db.ferramentas.filter(f => f.id != id);
+            localStorage.setItem('m_ferramentas', JSON.stringify(db.ferramentas));
+            carregarSelects(); renderizarListasGerenciamento();
+            mostrarNotificacao("Item removido!");
+        }
+
+        function salvarPosicao() {
+            let pos = document.getElementById('pos-nome').value;
+            if(pos) {
+                db.posicoes.push(pos);
+                localStorage.setItem('m_posicoes', JSON.stringify(db.posicoes));
+                document.getElementById('pos-nome').value = '';
+                carregarSelects(); renderizarListasGerenciamento();
+                fecharTodasSecoes();
+                mostrarNotificacao("Posição cadastrada!");
+            }
+        }
+
+        function carregarSelects() {
+            let sPos = document.getElementById('select-posicao-peca');
+            sPos.innerHTML = '';
+            db.posicoes.forEach(p => sPos.innerHTML += `<option value="${p}">${p}</option>`);
+
+            let sMat = document.getElementById('select-material');
+            sMat.innerHTML = '';
+            db.materiais.forEach(m => sMat.innerHTML += `<option value="${m.id}">${m.nome} (${m.mm}mm) - R$ ${m.valor}</option>`);
+
+            let sFerr = document.getElementById('select-ferramenta');
+            sFerr.innerHTML = '';
+            db.ferramentas.forEach(f => sFerr.innerHTML += `<option value="${f.id}">${f.nome} - R$ ${f.valor}</option>`);
+
+            let sCli = document.getElementById('select-cliente-direto');
+            sCli.innerHTML = '<option value="">-- CLIENTES CADASTRADOS --</option>';
+            db.clientes.forEach(c => sCli.innerHTML += `<option value="${c.id}">${c.nome}</option>`);
+        }
+
+        function renderizarListasGerenciamento() {
+            let divMDF = document.getElementById('lista-mdfs-cadastrados');
+            divMDF.innerHTML = '<h5>MDFs Salvos:</h5>';
+            db.materiais.forEach(m => {
+                divMDF.innerHTML += `<div class="item-lista"><span>${m.nome} (${m.mm}mm) - R$${m.valor}</span><div><button class="btn-edit" onclick="editarMat(${m.id})">Editar</button> <button class="btn-del" onclick="deletarMat(${m.id})">X</button></div></div>`;
+            });
+
+            let divFerr = document.getElementById('lista-ferramentas-cadastradas');
+            divFerr.innerHTML = '<h5>Itens Salvos:</h5>';
+            db.ferramentas.forEach(f => {
+                divFerr.innerHTML += `<div class="item-lista"><span>${f.nome} - R$${f.valor}</span><div><button class="btn-edit" onclick="editarFerr(${f.id})">Editar</button> <button class="btn-del" onclick="deletarFerr(${f.id})">X</button></div></div>`;
+            });
+
+            let divPos = document.getElementById('lista-posicoes');
+            divPos.innerHTML = '<h5>Posições de Peças:</h5>';
+            db.posicoes.forEach(p => divPos.innerHTML += `<div class="item-lista"><span>${p}</span></div>`);
+        }
+
+        function adicionarPeca() {
+            let pos = document.getElementById('select-posicao-peca').value;
+            let matId = parseInt(document.getElementById('select-material').value);
+            let alt = parseFloat(document.getElementById('peca-alt').value);
+            let larg = parseFloat(document.getElementById('peca-larg').value);
+            let qtd = parseInt(document.getElementById('peca-qtd').value) || 1;
+
+            if(matId && alt && larg) {
+                let mat = db.materiais.find(m => m.id === matId);
+                let areaM2 = ((alt / 100) * (larg / 100)) * qtd;
+                let custo = areaM2 * (mat.valor / CHAPA_M2);
+
+                pecasProjeto.push({ pos, material: mat.nome, alt, larg, qtd, custo });
+                renderizarPecas();
+                mostrarNotificacao("Peça adicionada!");
+            }
+        }
+
+        function renderizarPecas() {
+            let tb = document.getElementById('tb-pecas');
+            tb.innerHTML = '';
+            pecasProjeto.forEach((p, idx) => {
+                tb.innerHTML += `<tr><td>${p.pos}</td><td>${p.material}</td><td>${p.alt}x${p.larg}</td><td>${p.qtd}</td><td><button class="btn-del" onclick="pecasProjeto.splice(${idx},1);renderizarPecas();">X</button></td></tr>`;
+            });
+            calcularTotalGeral();
+        }
+
+        function adicionarFerramentaProjeto() {
+            let fId = parseInt(document.getElementById('select-ferramenta').value);
+            let qtd = parseInt(document.getElementById('ferr-qtd').value) || 1;
+
+            if(fId) {
+                let f = db.ferramentas.find(item => item.id === fId);
+                ferramentasProjeto.push({ nome: f.nome, qtd, total: f.valor * qtd });
+                renderizarFerramentas();
+                mostrarNotificacao("Item incluído!");
+            }
+        }
+
+        function renderizarFerramentas() {
+            let tb = document.getElementById('tb-ferramentas');
+            tb.innerHTML = '';
+            ferramentasProjeto.forEach((f, idx) => {
+                tb.innerHTML += `<tr><td>${f.nome}</td><td>${f.qtd}</td><td>R$ ${f.total.toFixed(2)}</td><td><button class="btn-del" onclick="ferramentasProjeto.splice(${idx},1);renderizarFerramentas();">X</button></td></tr>`;
+            });
+            calcularTotalGeral();
+        }
+
+        function calcularTotalGeral() {
+            let cMatBruto = pecasProjeto.reduce((a, b) => a + b.custo, 0);
+            let pctPerda = parseFloat(document.getElementById('val-perda-porcentagem').value) || 0;
+            let vlrPerda = cMatBruto * (pctPerda / 100);
+            let cMatTotal = cMatBruto + vlrPerda;
+
+            let cFerr = ferramentasProjeto.reduce((a, b) => a + b.total, 0);
+            let pctLucro = parseFloat(document.getElementById('val-margem-porcentagem').value) || 0;
+            
+            let margem = (cMatTotal + cFerr) * (pctLucro / 100);
+            let maoObra = parseFloat(document.getElementById('val-mao-obra').value) || 0;
+            let total = cMatTotal + cFerr + margem + maoObra;
+
+            document.getElementById('txt-perda-aplicada').innerText = pctPerda;
+            document.getElementById('txt-porcentagem-aplicada').innerText = pctLucro;
+            
+            document.getElementById('res-mat').innerText = cMatBruto.toFixed(2);
+            document.getElementById('res-perda').innerText = vlrPerda.toFixed(2);
+            document.getElementById('res-ferr').innerText = cFerr.toFixed(2);
+            document.getElementById('res-margem').innerText = margem.toFixed(2);
+            document.getElementById('res-mao-obra').innerText = maoObra.toFixed(2);
+            document.getElementById('res-total').innerText = total.toFixed(2);
+
+            let cupom = document.getElementById('cupom-itens-lista');
+            cupom.innerHTML = '';
+            pecasProjeto.forEach(p => {
+                cupom.innerHTML += `<div class="cupom-item"><span>${p.qtd}x ${p.material} [${p.alt}x${p.larg}cm]</span></div>`;
+            });
+            ferramentasProjeto.forEach(f => {
+                cupom.innerHTML += `<div class="cupom-item"><span>${f.qtd}x ${f.nome}</span></div>`;
+            });
+        }
+
+        function enviarWhatsApp() {
+            if(!clienteAtualNome) return mostrarNotificacao("Por favor, confirme os dados do cliente!");
+            
+            let telefone = clienteAtualTel.replace(/\D/g, '');
+            let msg = `*--- ${db.empresa.nome} ---*\n`;
+            if(db.empresa.tel) msg += `📞 WhatsApp: ${db.empresa.tel}\n`;
+            if(db.empresa.insta) msg += `📷 Insta: ${db.empresa.insta}\n`;
+            msg += `------------------------------------\n\n`;
+            msg += `*Cliente:* ${clienteAtualNome}\n`;
+            msg += `*Data:* ${new Date().toLocaleDateString('pt-BR')}\n\n`;
+            msg += `*RESUMO DO ORÇAMENTO:*\n`;
+
+            pecasProjeto.forEach(p => { msg += `- ${p.qtd}x ${p.material} [${p.alt}x${p.larg}cm]\n`; });
+            ferramentasProjeto.forEach(f => { msg += `- ${f.qtd}x ${f.nome}\n`; });
+
+            msg += `\n*TOTAL:* R$ ${document.getElementById('res-total').innerText}\n\n_Obrigado pela preferência!_`;
+
+            let url = `https://api.whatsapp.com/send?phone=55${telefone}&text=${encodeURIComponent(msg)}`;
+            window.open(url, '_blank');
+        }
+
+        function salvarOrcamentoCompleto() {
+            if(!clienteAtualNome) return mostrarNotificacao("Confirme os dados do cliente antes de salvar!");
+            
+            let orc = {
+                id: Date.now(),
+                cliente: clienteAtualNome,
+                tel: clienteAtualTel,
+                data: new Date().toLocaleDateString('pt-BR'),
+                pecas: pecasProjeto,
+                ferramentas: ferramentasProjeto,
+                pctPerda: parseFloat(document.getElementById('val-perda-porcentagem').value) || 0,
+                pctLucro: parseFloat(document.getElementById('val-margem-porcentagem').value) || 0,
+                maoObra: parseFloat(document.getElementById('val-mao-obra').value) || 0,
+                totalGeral: document.getElementById('res-total').innerText
+            };
+            db.orcamentos.unshift(orc);
+            localStorage.setItem('m_orcamentos', JSON.stringify(db.orcamentos));
+            mostrarNotificacao("Orçamento Completo Salvo com Sucesso!");
+        }
+    </script>
+</body>
+</html>
