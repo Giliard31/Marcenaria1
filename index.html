@@ -15,6 +15,10 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         
+        html {
+            font-size: 16px; /* Base para controle do zoom */
+        }
+
         body { 
             background-color: #f7f4ef; 
             color: #2c221e; 
@@ -59,6 +63,15 @@
             font-size: 1rem; transition: 0.2s;
         }
         .drawer-menu-item:hover { background: #f4e8c1; }
+
+        /* BOTOES DE CONTROLE DO TAMANHO DE FONTE */
+        .font-controls {
+            display: flex; gap: 8px; margin-bottom: 15px; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #e6d7c3; align-items: center; justify-content: space-between;
+        }
+        .btn-font {
+            flex: 1; padding: 8px; background: #8c6239; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-align: center;
+        }
+        .btn-font:hover { background: #73502e; }
 
         /* CARDS */
         .container { max-width: 700px; margin: 0 auto; padding: 0 15px; }
@@ -164,6 +177,14 @@
             <span style="cursor:pointer;" onclick="toggleDrawer()">✕</span>
         </div>
         <div class="drawer-content">
+            <!-- PAINEL DE CONTROLE DE TAMANHO DE FONTE -->
+            <div class="font-controls">
+                <span style="font-size: 0.9rem; font-weight: bold; color: #4a3525;">Tamanho do Texto:</span>
+                <button class="btn-font" onclick="alterarTamanhoFonte(-1)">A-</button>
+                <button class="btn-font" onclick="alterarTamanhoFonte(0)">Normal</button>
+                <button class="btn-font" onclick="alterarTamanhoFonte(1)">A+</button>
+            </div>
+
             <button class="drawer-menu-item btn-menu-sec" onclick="abrirSecao('sec-historico', this)">🔍 Histórico de Orçamentos</button>
             <button class="drawer-menu-item btn-menu-sec" onclick="abrirSecao('sec-empresa', this)">🏢 Dados da Empresa</button>
             <button class="drawer-menu-item btn-menu-sec" onclick="abrirSecao('sec-materiais', this)">📦 MDFs e Chapas</button>
@@ -305,6 +326,23 @@
     </div>
 
     <script>
+        // LÓGICA DE AUMENTAR E DIMINUIR A LETRA DO APLICATIVO
+        let tamanhoFonteAtual = parseInt(localStorage.getItem('m_fonte_px')) || 16;
+        document.documentElement.style.fontSize = tamanhoFonteAtual + 'px';
+
+        function alterarTamanhoFonte(acao) {
+            if (acao === 1) {
+                tamanhoFonteAtual += 2;
+            } else if (acao === -1) {
+                tamanhoFonteAtual = Math.max(12, tamanhoFonteAtual - 2);
+            } else {
+                tamanhoFonteAtual = 16;
+            }
+            document.documentElement.style.fontSize = tamanhoFonteAtual + 'px';
+            localStorage.setItem('m_fonte_px', tamanhoFonteAtual);
+            mostrarNotificacao("Tamanho da fonte ajustado!");
+        }
+
         // LÓGICA DE INSTALAÇÃO AUTOMÁTICA DO APLICATIVO
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -651,6 +689,12 @@
 
                 pecasProjeto.push({ pos, material: mat.nome, alt, larg, qtd, custo });
                 renderizarPecas();
+                
+                // LIMPA OS CAMPOS APÓS ADICIONAR À LISTA
+                document.getElementById('peca-alt').value = '';
+                document.getElementById('peca-larg').value = '';
+                document.getElementById('peca-qtd').value = '1';
+                
                 mostrarNotificacao("Peça adicionada!");
             }
         }
@@ -672,6 +716,10 @@
                 let f = db.ferramentas.find(item => item.id === fId);
                 ferramentasProjeto.push({ nome: f.nome, qtd, total: f.valor * qtd });
                 renderizarFerramentas();
+                
+                // LIMPA OS CAMPOS APÓS INCLUIR FERRAGEM
+                document.getElementById('ferr-qtd').value = '1';
+
                 mostrarNotificacao("Item incluído!");
             }
         }
@@ -718,6 +766,7 @@
             });
         }
 
+        // FUNÇÃO DO WHATSAPP ATUALIZADA - SEM PLANO DE CORTE E SEM VALORES INDIVIDUAIS
         function enviarWhatsApp() {
             if(!clienteAtualNome) return mostrarNotificacao("Por favor, confirme os dados do cliente!");
             
@@ -730,9 +779,25 @@
             msg += `*Data:* ${new Date().toLocaleDateString('pt-BR')}\n\n`;
             msg += `*RESUMO DO ORÇAMENTO:*\n`;
 
-            pecasProjeto.forEach(p => { msg += `- ${p.qtd}x ${p.material} [${p.alt}x${p.larg}cm]\n`; });
-            ferramentasProjeto.forEach(f => { msg += `- ${f.qtd}x ${f.nome}\n`; });
+            // Agrupa os materiais apenas pela quantidade total de peças/chapas daquela referência
+            let resumoMateriais = {};
+            pecasProjeto.forEach(p => {
+                if(!resumoMateriais[p.material]) {
+                    resumoMateriais[p.material] = 0;
+                }
+                resumoMateriais[p.material] += p.qtd;
+            });
 
+            for (let mat in resumoMateriais) {
+                msg += `- ${resumoMateriais[mat]}x ${mat}\n`;
+            }
+
+            // Exibe apenas as ferragens e acessórios sem os preços unitários
+            ferramentasProjeto.forEach(f => { 
+                msg += `- ${f.qtd}x ${f.nome}\n`; 
+            });
+
+            // Apenas o Valor Total Final
             msg += `\n*TOTAL:* R$ ${document.getElementById('res-total').innerText}\n\n_Obrigado pela preferência!_`;
 
             let url = `https://api.whatsapp.com/send?phone=55${telefone}&text=${encodeURIComponent(msg)}`;
