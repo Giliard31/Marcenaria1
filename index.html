@@ -16,7 +16,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         
         html {
-            font-size: 16px; /* Base para controle do zoom */
+            font-size: 16px;
         }
 
         body { 
@@ -193,7 +193,7 @@
 
             <div id="sec-historico" class="modal-sec">
                 <h4 style="margin: 10px 0;">Histórico de Orçamentos</h4>
-                <div class="form-group"><input type="text" id="input-busca-historico" placeholder="Pesquisar..." oninput="renderizarHistoricoDrawer()"></div>
+                <div class="form-group"><input type="text" id="input-busca-historico" placeholder="Pesquisar por nome do cliente..." oninput="renderizarHistoricoDrawer()"></div>
                 <div id="lista-historico-drawer" style="margin-top: 15px; max-height: 350px; overflow-y: auto;"></div>
             </div>
 
@@ -320,13 +320,13 @@
                 <div class="resumo-linha"><span>Mão de Obra:</span><span>R$ <span id="res-mao-obra">400.00</span></span></div>
                 <div class="resumo-linha total"><span>VALOR TOTAL:</span><span>R$ <span id="res-total">0.00</span></span></div>
             </div>
-            <button class="btn btn-success" style="margin-top: 15px;" onclick="salvarOrcamentoCompleto()">💾 Salvar Orçamento Completo</button>
+            <button class="btn btn-success" style="margin-top: 15px;" onclick="salvarOrcamentoCompleto()">💾 Salvar Orçamento & Plano de Corte</button>
             <button class="btn btn-wsp" onclick="enviarWhatsApp()">📲 Enviar Orçamento via WhatsApp</button>
         </div>
     </div>
 
     <script>
-        // LÓGICA DE AUMENTAR E DIMINUIR A LETRA DO APLICATIVO
+        // CONTROLADOR DE FONTE
         let tamanhoFonteAtual = parseInt(localStorage.getItem('m_fonte_px')) || 16;
         document.documentElement.style.fontSize = tamanhoFonteAtual + 'px';
 
@@ -343,7 +343,7 @@
             mostrarNotificacao("Tamanho da fonte ajustado!");
         }
 
-        // LÓGICA DE INSTALAÇÃO AUTOMÁTICA DO APLICATIVO
+        // PWA PROMPT
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -368,7 +368,6 @@
             document.getElementById('install-banner').style.display = 'none';
         }
 
-        // REGISTRO DE SERVICE WORKER
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
         }
@@ -495,11 +494,12 @@
             }
 
             filtrados.forEach(o => {
+                let qtdPecas = o.pecas ? o.pecas.length : 0;
                 container.innerHTML += `
                     <div class="item-lista" style="cursor:pointer;" onclick="carregarOrcamentoDoHistorico(${o.id})">
                         <div>
                             <strong>👤 ${o.cliente}</strong><br>
-                            <small>${o.data} - Total: R$ ${o.totalGeral}</small>
+                            <small>${o.data} - ${qtdPecas} Peça(s) - R$ ${o.totalGeral}</small>
                         </div>
                         <button class="btn-edit">Abrir</button>
                     </div>
@@ -518,16 +518,18 @@
                 
                 ocultarESalvarCliente();
 
-                pecasProjeto = orc.pecas || [];
-                ferramentasProjeto = orc.ferramentas || [];
+                // RECUPERA O PLANO DE CORTE COMPLETO COM TODAS AS PEÇAS E MEDIDAS
+                pecasProjeto = orc.pecas ? JSON.parse(JSON.stringify(orc.pecas)) : [];
+                ferramentasProjeto = orc.ferramentas ? JSON.parse(JSON.stringify(orc.ferramentas)) : [];
+                
                 document.getElementById('val-mao-obra').value = orc.maoObra || 400;
-                if(orc.pctLucro) document.getElementById('val-margem-porcentagem').value = orc.pctLucro;
+                if(orc.pctLucro !== undefined) document.getElementById('val-margem-porcentagem').value = orc.pctLucro;
                 if(orc.pctPerda !== undefined) document.getElementById('val-perda-porcentagem').value = orc.pctPerda;
                 
                 renderizarPecas();
                 renderizarFerramentas();
                 toggleDrawer();
-                mostrarNotificacao("Orçamento carregado!");
+                mostrarNotificacao(`Plano de corte de ${orc.cliente} carregado!`);
             }
         }
 
@@ -576,7 +578,7 @@
             carregarSelects();
             renderizarListasGerenciamento();
             fecharTodasSecoes();
-            mostrarNotificacao("Material salvo com sucesso!");
+            mostrarNotificacao("Material salvo!");
         }
         function editarMat(id) {
             let m = db.materiais.find(item => item.id == id);
@@ -612,7 +614,7 @@
             document.getElementById('ferr-nome').value = ''; document.getElementById('ferr-valor').value = '';
             carregarSelects(); renderizarListasGerenciamento();
             fecharTodasSecoes();
-            mostrarNotificacao("Item salvo com sucesso!");
+            mostrarNotificacao("Item salvo!");
         }
         function editarFerr(id) {
             let f = db.ferramentas.find(item => item.id == id);
@@ -690,12 +692,12 @@
                 pecasProjeto.push({ pos, material: mat.nome, alt, larg, qtd, custo });
                 renderizarPecas();
                 
-                // LIMPA OS CAMPOS APÓS ADICIONAR À LISTA
+                // LIMPA OS CAMPOS
                 document.getElementById('peca-alt').value = '';
                 document.getElementById('peca-larg').value = '';
                 document.getElementById('peca-qtd').value = '1';
                 
-                mostrarNotificacao("Peça adicionada!");
+                mostrarNotificacao("Peça adicionada ao plano de corte!");
             }
         }
 
@@ -717,10 +719,10 @@
                 ferramentasProjeto.push({ nome: f.nome, qtd, total: f.valor * qtd });
                 renderizarFerramentas();
                 
-                // LIMPA OS CAMPOS APÓS INCLUIR FERRAGEM
+                // LIMPA OS CAMPOS
                 document.getElementById('ferr-qtd').value = '1';
 
-                mostrarNotificacao("Item incluído!");
+                mostrarNotificacao("Ferragem adicionada!");
             }
         }
 
@@ -766,7 +768,7 @@
             });
         }
 
-        // FUNÇÃO DO WHATSAPP ATUALIZADA - SEM PLANO DE CORTE E SEM VALORES INDIVIDUAIS
+        // ENVIO LIMPO PARA O CLIENTE VIA WHATSAPP (SEM EXPOR MEDIDAS E DETALHES DE CORTE)
         function enviarWhatsApp() {
             if(!clienteAtualNome) return mostrarNotificacao("Por favor, confirme os dados do cliente!");
             
@@ -777,9 +779,9 @@
             msg += `------------------------------------\n\n`;
             msg += `*Cliente:* ${clienteAtualNome}\n`;
             msg += `*Data:* ${new Date().toLocaleDateString('pt-BR')}\n\n`;
-            msg += `*RESUMO DO ORÇAMENTO:*\n`;
+            msg += `*RESUMO DO PROJETO:*\n`;
 
-            // Agrupa os materiais apenas pela quantidade total de peças/chapas daquela referência
+            // Agrupa os materiais apenas pela quantidade total de peças/mDF sem enviar as medidas
             let resumoMateriais = {};
             pecasProjeto.forEach(p => {
                 if(!resumoMateriais[p.material]) {
@@ -789,39 +791,47 @@
             });
 
             for (let mat in resumoMateriais) {
-                msg += `- ${resumoMateriais[mat]}x ${mat}\n`;
+                msg += `- ${resumoMateriais[mat]}x Peças em ${mat}\n`;
             }
 
-            // Exibe apenas as ferragens e acessórios sem os preços unitários
             ferramentasProjeto.forEach(f => { 
                 msg += `- ${f.qtd}x ${f.nome}\n`; 
             });
 
-            // Apenas o Valor Total Final
-            msg += `\n*TOTAL:* R$ ${document.getElementById('res-total').innerText}\n\n_Obrigado pela preferência!_`;
+            msg += `\n*VALOR TOTAL:* R$ ${document.getElementById('res-total').innerText}\n\n_Ficamos à disposição para iniciar o projeto!_`;
 
             let url = `https://api.whatsapp.com/send?phone=55${telefone}&text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
         }
 
+        // SALVA O HISTÓRICO COMPLETO COM TODAS AS PEÇAS E MEDIDAS (PLANO DE CORTE)
         function salvarOrcamentoCompleto() {
             if(!clienteAtualNome) return mostrarNotificacao("Confirme os dados do cliente antes de salvar!");
             
+            // Verifica se já existe um orçamento salvo desse cliente para atualizar ou cria um novo
+            let indexExistente = db.orcamentos.findIndex(o => o.cliente.toLowerCase() === clienteAtualNome.toLowerCase());
+            
             let orc = {
-                id: Date.now(),
+                id: (indexExistente !== -1) ? db.orcamentos[indexExistente].id : Date.now(),
                 cliente: clienteAtualNome,
                 tel: clienteAtualTel,
                 data: new Date().toLocaleDateString('pt-BR'),
-                pecas: pecasProjeto,
-                ferramentas: ferramentasProjeto,
+                pecas: JSON.parse(JSON.stringify(pecasProjeto)), // Copia todo o plano de corte (posição, medidas, qtd e custos)
+                ferramentas: JSON.parse(JSON.stringify(ferramentasProjeto)),
                 pctPerda: parseFloat(document.getElementById('val-perda-porcentagem').value) || 0,
                 pctLucro: parseFloat(document.getElementById('val-margem-porcentagem').value) || 0,
                 maoObra: parseFloat(document.getElementById('val-mao-obra').value) || 0,
                 totalGeral: document.getElementById('res-total').innerText
             };
-            db.orcamentos.unshift(orc);
+
+            if(indexExistente !== -1) {
+                db.orcamentos[indexExistente] = orc; // Atualiza o plano de corte existente
+            } else {
+                db.orcamentos.unshift(orc); // Adiciona novo
+            }
+
             localStorage.setItem('m_orcamentos', JSON.stringify(db.orcamentos));
-            mostrarNotificacao("Orçamento Completo Salvo com Sucesso!");
+            mostrarNotificacao("Plano de corte e Orçamento salvos no Histórico!");
         }
     </script>
 </body>
