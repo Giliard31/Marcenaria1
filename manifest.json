@@ -8,14 +8,14 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/Giliard31/Marcenaria1/refs/heads/main/1787765468470.jpg",
+      "src": "https://raw.githubusercontent.com/Giliard31/Marcenaria1/refs/heads/main/1787765468470%20(1).jpg",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/jpg"
     },
     {
-      "src": "https://raw.githubusercontent.com/Giliard31/Marcenaria1/refs/heads/main/1787765468470.jpg",
+      "src": "https://raw.githubusercontent.com/Giliard31/Marcenaria1/refs/heads/main/1787765468470%20(1).jpg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/jpg"
     }
   ]
 }
